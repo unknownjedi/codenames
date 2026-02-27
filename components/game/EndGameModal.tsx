@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -18,9 +19,20 @@ interface EndGameModalProps {
 
 export function EndGameModal({ winner, roomCode }: EndGameModalProps) {
   const router = useRouter();
+  const [countdown, setCountdown] = useState(5);
   const isRed = winner === 'red';
   const teamLabel = isRed ? 'Red' : 'Blue';
   const color = isRed ? 'text-red-400' : 'text-blue-400';
+
+  // Auto-redirect after countdown
+  useEffect(() => {
+    if (countdown <= 0) {
+      router.push('/');
+      return;
+    }
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown, router]);
 
   return (
     <Dialog open={true}>
@@ -44,7 +56,7 @@ export function EndGameModal({ winner, roomCode }: EndGameModalProps) {
             variant="outline"
             className="flex-1 border-slate-600 text-slate-300 hover:text-white"
           >
-            Back to Home
+            Back to Home ({countdown}s)
           </Button>
         </div>
       </DialogContent>

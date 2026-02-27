@@ -30,7 +30,6 @@ interface GameBoardProps {
 
 export function GameBoard({
   game,
-  players,
   cards,
   events,
   currentPlayer,
@@ -40,6 +39,7 @@ export function GameBoard({
   canEndTurn,
   redPlayers,
   bluePlayers,
+  isHost,
   conn,
   roomCode,
 }: GameBoardProps) {
@@ -56,7 +56,7 @@ export function GameBoard({
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
       {/* Status Bar */}
-      <GameStatusBar game={game} currentPlayer={currentPlayer} roomCode={roomCode} />
+      <GameStatusBar game={game} currentPlayer={currentPlayer} roomCode={roomCode} isHost={isHost} conn={conn} />
 
       <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4">
         {/* Left: Red Team Scoreboard */}

@@ -63,14 +63,20 @@ export default function Home() {
     if (!name.trim() || !conn) return;
     localStorage.setItem(PLAYER_NAME_KEY, name.trim());
     setCreating(true);
-    conn.reducers.createGame({ playerName: name.trim() });
+    conn.reducers.createGame({ playerName: name.trim() }).catch((err: Error) => {
+      toast.error(err.message);
+      setCreating(false);
+    });
   };
 
   const handleJoin = () => {
     if (!name.trim() || !roomCode.trim() || !conn) return;
     localStorage.setItem(PLAYER_NAME_KEY, name.trim());
     setJoining(true);
-    conn.reducers.joinGame({ roomCode: roomCode.trim().toUpperCase(), playerName: name.trim() });
+    conn.reducers.joinGame({ roomCode: roomCode.trim().toUpperCase(), playerName: name.trim() }).catch((err: Error) => {
+      toast.error(err.message);
+      setJoining(false);
+    });
   };
 
   const isConnected = connState.isActive;

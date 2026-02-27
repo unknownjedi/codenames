@@ -124,6 +124,29 @@ function getCardsForGame(ctx: any, gameId: bigint) {
   return cards;
 }
 
+function deleteGameData(ctx: any, gameId: bigint) {
+  // Collect IDs first to avoid mutation during iteration
+  const playerIds: bigint[] = [];
+  for (const p of ctx.db.Player.iter()) {
+    if (p.gameId === gameId) playerIds.push(p.playerId);
+  }
+  playerIds.forEach((id) => ctx.db.Player.playerId.delete(id));
+
+  const cardIds: bigint[] = [];
+  for (const c of ctx.db.Card.iter()) {
+    if (c.gameId === gameId) cardIds.push(c.cardId);
+  }
+  cardIds.forEach((id) => ctx.db.Card.cardId.delete(id));
+
+  const eventIds: bigint[] = [];
+  for (const e of ctx.db.GameEvent.iter()) {
+    if (e.gameId === gameId) eventIds.push(e.eventId);
+  }
+  eventIds.forEach((id) => ctx.db.GameEvent.eventId.delete(id));
+
+  ctx.db.Game.gameId.delete(gameId);
+}
+
 function switchTurn(ctx: any, game: any, redRemaining: number, blueRemaining: number) {
   const nextTeam = game.currentTeam === 'red' ? 'blue' : 'red';
   ctx.db.Game.gameId.update({
@@ -155,9 +178,29 @@ export const onConnect = spacetimedb.clientConnected((_ctx) => {
 });
 
 export const onDisconnect = spacetimedb.clientDisconnected((ctx) => {
+  // Collect this sender's connected players first to avoid mutation during iteration
+  const senderPlayers: any[] = [];
   for (const player of ctx.db.Player.iter()) {
     if (player.identity.isEqual(ctx.sender) && player.isConnected) {
-      ctx.db.Player.playerId.update({ ...player, isConnected: false });
+      senderPlayers.push(player);
+    }
+  }
+
+  for (const player of senderPlayers) {
+    ctx.db.Player.playerId.update({ ...player, isConnected: false });
+
+    // Check if any OTHER players are still connected for this game
+    let anyConnected = false;
+    for (const p of ctx.db.Player.iter()) {
+      if (p.gameId === player.gameId && !p.identity.isEqual(ctx.sender) && p.isConnected) {
+        anyConnected = true;
+        break;
+      }
+    }
+
+    // If no one is connected, delete all game data
+    if (!anyConnected) {
+      deleteGameData(ctx, player.gameId);
     }
   }
 });
@@ -244,13 +287,30 @@ export const joinGame = spacetimedb.reducer(
     const gamePlayers = getPlayersForGame(ctx, game.gameId);
     if (gamePlayers.length >= 10) throw new SenderError('Game is full (max 10 players).');
 
+    // If game is in progress, auto-assign to the team with fewer members (or random if equal)
+    let team = 'unassigned';
+    let role = 'unassigned';
+    if (game.status === 'in_progress') {
+      const redCount = gamePlayers.filter((p) => p.team === 'red').length;
+      const blueCount = gamePlayers.filter((p) => p.team === 'blue').length;
+      if (redCount < blueCount) {
+        team = 'red';
+      } else if (blueCount < redCount) {
+        team = 'blue';
+      } else {
+        const rng = seededRandom(BigInt(Date.now()));
+        team = rng() > 0.5 ? 'red' : 'blue';
+      }
+      role = 'operative';
+    }
+
     ctx.db.Player.insert({
       playerId: 0n,
       gameId: game.gameId,
       identity: ctx.sender,
       name: trimmedName,
-      team: 'unassigned',
-      role: 'unassigned',
+      team,
+      role,
       isHost: false,
       isConnected: true,
     });
@@ -577,6 +637,50 @@ export const leaveGame = spacetimedb.reducer(
       }
     } else {
       ctx.db.Player.playerId.update({ ...player, isConnected: false });
+    }
+  }
+);
+
+export const forceEndGame = spacetimedb.reducer(
+  { roomCode: t.string() },
+  (ctx, { roomCode }) => {
+    const game = findGameByCode(ctx, roomCode.toUpperCase().trim());
+    if (!game) throw new SenderError('Game not found');
+
+    const player = findPlayerByIdentity(ctx, game.gameId, ctx.sender);
+    if (!player || !player.isHost) throw new SenderError('Only the host can end the game');
+
+    deleteGameData(ctx, game.gameId);
+  }
+);
+
+export const randomizeTeams = spacetimedb.reducer(
+  { roomCode: t.string() },
+  (ctx, { roomCode }) => {
+    const game = findGameByCode(ctx, roomCode.toUpperCase().trim());
+    if (!game) throw new SenderError('Game not found');
+    if (game.status !== 'waiting') throw new SenderError('Game already started');
+
+    const player = findPlayerByIdentity(ctx, game.gameId, ctx.sender);
+    if (!player || !player.isHost) throw new SenderError('Only the host can randomize teams');
+
+    const gamePlayers = getPlayersForGame(ctx, game.gameId);
+    if (gamePlayers.length < 4) throw new SenderError('Need at least 4 players to randomize teams');
+
+    const rng = seededRandom(BigInt(Date.now()));
+    const shuffled = shuffleArray(gamePlayers, rng);
+
+    const half = Math.ceil(shuffled.length / 2);
+
+    for (let i = 0; i < shuffled.length; i++) {
+      const team = i < half ? 'red' : 'blue';
+      // First player of each team becomes spymaster, rest are operatives
+      const isFirstOfTeam = i === 0 || i === half;
+      ctx.db.Player.playerId.update({
+        ...shuffled[i],
+        team,
+        role: isFirstOfTeam ? 'spymaster' : 'operative',
+      });
     }
   }
 );

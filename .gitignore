@@ -7,7 +7,7 @@ spacetimedb/node_modules/
 out/
 
 # Generated
-src/module_bindings/
+# src/module_bindings/
 
 # Environment
 .env.local

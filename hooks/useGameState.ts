@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTable } from 'spacetimedb/react';
 import { tables } from '@/src/module_bindings';
 import { useConnection, useConnectionState } from './useConnection';
@@ -9,6 +9,7 @@ export function useGameState(roomCode: string) {
   const conn = useConnection();
   const connState = useConnectionState();
   const subscribed = useRef(false);
+  const [subscriptionApplied, setSubscriptionApplied] = useState(false);
 
   // Subscribe to tables for this game
   useEffect(() => {
@@ -17,15 +18,17 @@ export function useGameState(roomCode: string) {
     conn.subscriptionBuilder()
       .onApplied(() => {
         console.log('Subscription applied for game:', roomCode);
+        setSubscriptionApplied(true);
       })
       .onError((ctx) => {
         console.error('Subscription error:', ctx.event);
+        setSubscriptionApplied(true); // Allow redirect logic to fire on error
       })
       .subscribe([
         `SELECT * FROM game WHERE room_code = '${roomCode}'`,
-        `SELECT * FROM player WHERE game_id IN (SELECT game_id FROM game WHERE room_code = '${roomCode}')`,
-        `SELECT * FROM card WHERE game_id IN (SELECT game_id FROM game WHERE room_code = '${roomCode}')`,
-        `SELECT * FROM game_event WHERE game_id IN (SELECT game_id FROM game WHERE room_code = '${roomCode}')`,
+        'SELECT * FROM player',
+        'SELECT * FROM card',
+        'SELECT * FROM game_event',
       ]);
   }, [conn, roomCode]);
 
@@ -83,6 +86,7 @@ export function useGameState(roomCode: string) {
       unassigned,
       isHost: currentPlayer?.isHost ?? false,
       conn,
+      subscriptionApplied,
     };
-  }, [games, allPlayers, allCards, allEvents, connState.identity, conn, roomCode]);
+  }, [games, allPlayers, allCards, allEvents, connState.identity, conn, roomCode, subscriptionApplied]);
 }

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Copy, Play, Users, Crown, Eye, Crosshair } from 'lucide-react';
+import { Copy, Play, Users, Crown, Eye, Crosshair, Shuffle } from 'lucide-react';
 import type { DbConnection } from '@/src/module_bindings';
 
 interface LobbyProps {
@@ -49,6 +49,16 @@ export function Lobby({
       toast.error(e.message);
     }
   };
+
+  const handleRandomize = () => {
+    try {
+      conn?.reducers.randomizeTeams({ roomCode });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const totalPlayers = redPlayers.length + bluePlayers.length + unassigned.length;
 
   const canStart =
     isHost &&
@@ -124,8 +134,26 @@ export function Lobby({
           </div>
         )}
 
-        {/* Start Button */}
-        <div className="text-center">
+        {/* Actions */}
+        <div className="text-center space-y-3">
+          {isHost && (
+            <div className="mb-2">
+              <Button
+                onClick={handleRandomize}
+                disabled={totalPlayers < 4}
+                variant="outline"
+                className="border-slate-600 text-slate-300 hover:text-white hover:bg-slate-800"
+              >
+                <Shuffle className="h-4 w-4 mr-2" />
+                Randomize Teams
+              </Button>
+              {totalPlayers < 4 && (
+                <p className="text-slate-500 text-xs mt-1">
+                  Need at least 4 players to randomize
+                </p>
+              )}
+            </div>
+          )}
           {isHost ? (
             <Button
               onClick={handleStart}

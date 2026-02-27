@@ -7,8 +7,8 @@ import { Identity } from 'spacetimedb';
 import { Toaster } from '@/components/ui/sonner';
 
 const HOST =
-  process.env.NEXT_PUBLIC_SPACETIMEDB_HOST ?? 'ws://localhost:3000';
-const DB_NAME = process.env.NEXT_PUBLIC_SPACETIMEDB_DB_NAME ?? 'codenames';
+  process.env.NEXT_PUBLIC_SPACETIMEDB_HOST ?? 'wss://maincloud.spacetimedb.com';
+const DB_NAME = process.env.NEXT_PUBLIC_SPACETIMEDB_DB_NAME ?? 'codenames-a80vu';
 const TOKEN_KEY = `spacetimedb_${DB_NAME}_token`;
 
 const onConnect = (_conn: DbConnection, identity: Identity, token: string) => {
