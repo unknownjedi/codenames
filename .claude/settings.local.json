@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:spacetimedb.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(python3:*)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(spacetime dev:*)",
+      "Bash(spacetime:*)",
+      "Bash(shopt:*)",
+      "Bash(read f:*)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest:*)",
+      "Bash(grep -r \"SpacetimeDBContext\" /Users/jayanthsp/Desktop/Projects/Games/Codenames/node_modules/spacetimedb/react/ 2>/dev/null | head -5 || echo \"Not found in react/; searching broader...\"\ngrep -r \"export.*SpacetimeDBContext\\\\|export.*useSpacetimeDB\\\\|export.*useConnection\" /Users/jayanthsp/Desktop/Projects/Games/Codenames/node_modules/spacetimedb/ --include=\"*.d.ts\" 2>/dev/null | head -10)",
+      "Bash(npx next:*)",
+      "Bash(git:*)"
+    ]
+  }
+}

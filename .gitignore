@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+spacetimedb/node_modules/
+
+# Next.js
+.next/
+out/
+
+# Generated
+src/module_bindings/
+
+# Environment
+.env.local
+.env*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SpacetimeDB
+spacetime.local.json
