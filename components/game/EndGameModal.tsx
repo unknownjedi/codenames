@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -11,28 +10,24 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Trophy } from 'lucide-react';
+import type { DbConnection } from '@/src/module_bindings';
 
 interface EndGameModalProps {
   winner: string;
   roomCode: string;
+  isHost: boolean;
+  conn: DbConnection | null;
 }
 
-export function EndGameModal({ winner, roomCode }: EndGameModalProps) {
+export function EndGameModal({ winner, roomCode, isHost, conn }: EndGameModalProps) {
   const router = useRouter();
-  const [countdown, setCountdown] = useState(5);
   const isRed = winner === 'red';
   const teamLabel = isRed ? 'Red' : 'Blue';
   const color = isRed ? 'text-red-400' : 'text-blue-400';
 
-  // Auto-redirect after countdown
-  useEffect(() => {
-    if (countdown <= 0) {
-      router.push('/');
-      return;
-    }
-    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown, router]);
+  const handleEndGame = () => {
+    conn?.reducers.forceEndGame({ roomCode });
+  };
 
   return (
     <Dialog open={true}>
@@ -56,8 +51,16 @@ export function EndGameModal({ winner, roomCode }: EndGameModalProps) {
             variant="outline"
             className="flex-1 border-slate-600 text-slate-300 hover:text-white"
           >
-            Back to Home ({countdown}s)
+            Back to Home
           </Button>
+          {isHost && (
+            <Button
+              onClick={handleEndGame}
+              className="flex-1 bg-red-600 hover:bg-red-500 text-white"
+            >
+              End Game
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

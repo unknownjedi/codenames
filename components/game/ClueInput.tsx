@@ -16,20 +16,27 @@ export function ClueInput({ roomCode, conn }: ClueInputProps) {
   const [word, setWord] = useState('');
   const [number, setNumber] = useState(1);
   const [isUnlimited, setIsUnlimited] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!word.trim() || !conn) return;
+    if (!word.trim() || !conn || submitting) return;
 
     const clueNumber = isUnlimited ? 99 : number;
-    try {
-      conn.reducers.giveClue({ roomCode, clueWord: word.trim(), clueNumber });
-      setWord('');
-      setNumber(1);
-      setIsUnlimited(false);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to give clue');
-    }
+    setSubmitting(true);
+    conn.reducers
+      .giveClue({ roomCode, clueWord: word.trim(), clueNumber })
+      .then(() => {
+        setWord('');
+        setNumber(1);
+        setIsUnlimited(false);
+      })
+      .catch((err: Error) => {
+        toast.error(err.message || 'Failed to give clue');
+      })
+      .finally(() => {
+        setSubmitting(false);
+      });
   };
 
   return (
@@ -68,7 +75,7 @@ export function ClueInput({ roomCode, conn }: ClueInputProps) {
         </button>
         <Button
           type="submit"
-          disabled={!word.trim()}
+          disabled={!word.trim() || submitting}
           className="h-11 px-6 bg-emerald-600 hover:bg-emerald-500 text-white"
         >
           <Send className="h-4 w-4" />
@@ -77,6 +84,9 @@ export function ClueInput({ roomCode, conn }: ClueInputProps) {
       {isUnlimited && (
         <p className="text-xs text-amber-400 text-center">Unlimited guesses mode</p>
       )}
+      <p className="text-xs text-slate-500 text-center">
+        Clue must be a single word, not on the board. Number = how many cards relate to it.
+      </p>
     </form>
   );
 }

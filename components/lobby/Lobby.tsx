@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Copy, Play, Users, Crown, Eye, Crosshair, Shuffle } from 'lucide-react';
+import { RulesDialog } from '@/components/shared/RulesDialog';
 import type { DbConnection } from '@/src/module_bindings';
 
 interface LobbyProps {
@@ -91,6 +92,9 @@ export function Lobby({
           <p className="text-slate-500 text-xs mt-2">
             {game.firstTeam === 'red' ? 'Red' : 'Blue'} team goes first
           </p>
+          <div className="mt-3">
+            <RulesDialog />
+          </div>
         </div>
 
         {/* Teams */}

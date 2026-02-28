@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Copy, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { RulesDialog } from '@/components/shared/RulesDialog';
 import type { DbConnection } from '@/src/module_bindings';
 
 interface GameStatusBarProps {
@@ -61,6 +62,7 @@ export function GameStatusBar({ game, currentPlayer, roomCode, isHost, conn }: G
               <span className="text-xs font-mono text-slate-400">{roomCode}</span>
               <Copy className="h-3 w-3 text-slate-500" />
             </button>
+            <RulesDialog />
           </div>
 
           {/* Center: Turn info */}

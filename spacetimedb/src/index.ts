@@ -332,7 +332,7 @@ export const joinTeam = spacetimedb.reducer(
     ctx.db.Player.playerId.update({
       ...player,
       team,
-      role: 'unassigned',
+      role: 'spectator',
     });
   }
 );

@@ -145,7 +145,7 @@ export function GameBoard({
 
       {/* End Game Modal */}
       {game.status === 'finished' && (
-        <EndGameModal winner={game.winner} roomCode={roomCode} />
+        <EndGameModal winner={game.winner} roomCode={roomCode} isHost={isHost} conn={conn} />
       )}
     </div>
   );
