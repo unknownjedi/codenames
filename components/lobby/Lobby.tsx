@@ -124,12 +124,15 @@ export function Lobby({
               <span className="text-sm text-slate-400">Unassigned Players</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {unassigned.map((p) => (
-                <Badge key={p.playerId.toString()} variant="secondary" className="bg-slate-700/50">
-                  {p.name}
-                  {p.isHost && <Crown className="h-3 w-3 ml-1 text-amber-400" />}
-                </Badge>
-              ))}
+              {unassigned.map((p) => {
+                const isMe = currentPlayer && p.playerId === currentPlayer.playerId;
+                return (
+                  <Badge key={p.playerId.toString()} variant="secondary" className={isMe ? 'bg-emerald-900/50 text-emerald-300 ring-1 ring-emerald-500/40' : 'bg-slate-700/50'}>
+                    {p.name}{isMe && ' (You)'}
+                    {p.isHost && <Crown className="h-3 w-3 ml-1 text-amber-400" />}
+                  </Badge>
+                );
+              })}
             </div>
           </div>
         )}
@@ -169,12 +172,29 @@ export function Lobby({
           )}
           {isHost && !canStart && (
             <p className="text-amber-400 text-xs mt-2">
-              Each team needs a Spymaster and at least one Operative
+              Each team needs a Spymaster and an Operative
             </p>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function isCurrentUser(player: any, currentPlayer: any): boolean {
+  return currentPlayer && player.playerId === currentPlayer.playerId;
+}
+
+function PlayerName({ player, currentPlayer }: { player: any; currentPlayer: any }) {
+  const isMe = isCurrentUser(player, currentPlayer);
+  return (
+    <>
+      <span className={`text-sm ${isMe ? 'font-bold text-emerald-400' : 'text-white'}`}>
+        {player.name}
+        {isMe && <span className="text-emerald-500 text-xs ml-1">(You)</span>}
+      </span>
+      {player.isHost && <Crown className="h-3 w-3 text-amber-400" />}
+    </>
   );
 }
 
@@ -195,7 +215,8 @@ function TeamPanel({
 }) {
   const isOnTeam = currentPlayer?.team === team;
   const spymaster = players.find((p) => p.role === 'spymaster');
-  const operatives = players.filter((p) => p.role === 'operative');
+  const operative = players.find((p) => p.role === 'operative');
+  const spectators = players.filter((p) => p.role === 'spectator');
   const unroled = players.filter((p) => p.role === 'unassigned');
 
   const borderColor = team === 'red' ? 'border-red-500/30' : 'border-blue-500/30';
@@ -205,6 +226,8 @@ function TeamPanel({
     team === 'red'
       ? 'bg-red-600 hover:bg-red-500'
       : 'bg-blue-600 hover:bg-blue-500';
+
+  const myRole = currentPlayer?.role;
 
   return (
     <div className={`${bgColor} border ${borderColor} rounded-xl p-5`}>
@@ -223,8 +246,7 @@ function TeamPanel({
         </div>
         {spymaster ? (
           <div className="bg-slate-800/50 rounded-lg px-3 py-2 flex items-center gap-2">
-            <span className="text-white text-sm font-medium">{spymaster.name}</span>
-            {spymaster.isHost && <Crown className="h-3 w-3 text-amber-400" />}
+            <PlayerName player={spymaster} currentPlayer={currentPlayer} />
           </div>
         ) : isOnTeam ? (
           <Button
@@ -244,20 +266,47 @@ function TeamPanel({
 
       <Separator className="bg-slate-700/50 my-3" />
 
-      {/* Operatives */}
+      {/* Operative slot (single, like spymaster) */}
       <div className="mb-3">
         <div className="flex items-center gap-2 mb-2">
           <Crosshair className="h-3.5 w-3.5 text-slate-400" />
-          <span className="text-xs text-slate-400 uppercase tracking-wide">Operatives</span>
+          <span className="text-xs text-slate-400 uppercase tracking-wide">Operative</span>
+        </div>
+        {operative ? (
+          <div className="bg-slate-800/50 rounded-lg px-3 py-2 flex items-center gap-2">
+            <PlayerName player={operative} currentPlayer={currentPlayer} />
+          </div>
+        ) : isOnTeam ? (
+          <Button
+            onClick={() => onSetRole('operative')}
+            variant="outline"
+            size="sm"
+            className="w-full border-dashed border-slate-600 text-slate-400 hover:text-white"
+          >
+            Become Operative
+          </Button>
+        ) : (
+          <div className="bg-slate-800/30 rounded-lg px-3 py-2 text-slate-600 text-sm">
+            Empty
+          </div>
+        )}
+      </div>
+
+      <Separator className="bg-slate-700/50 my-3" />
+
+      {/* Spectators + Unassigned */}
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Users className="h-3.5 w-3.5 text-slate-400" />
+          <span className="text-xs text-slate-400 uppercase tracking-wide">Spectators</span>
         </div>
         <div className="space-y-1.5">
-          {operatives.map((p) => (
+          {spectators.map((p) => (
             <div
               key={p.playerId.toString()}
               className="bg-slate-800/50 rounded-lg px-3 py-2 flex items-center gap-2"
             >
-              <span className="text-white text-sm">{p.name}</span>
-              {p.isHost && <Crown className="h-3 w-3 text-amber-400" />}
+              <PlayerName player={p} currentPlayer={currentPlayer} />
             </div>
           ))}
           {unroled.map((p) => (
@@ -265,19 +314,22 @@ function TeamPanel({
               key={p.playerId.toString()}
               className="bg-slate-800/30 rounded-lg px-3 py-2 flex items-center gap-2"
             >
-              <span className="text-slate-400 text-sm">{p.name}</span>
+              <span className={`text-sm ${isCurrentUser(p, currentPlayer) ? 'font-bold text-emerald-400' : 'text-slate-400'}`}>
+                {p.name}
+                {isCurrentUser(p, currentPlayer) && <span className="text-emerald-500 text-xs ml-1">(You)</span>}
+              </span>
               <span className="text-slate-600 text-xs">(choosing role...)</span>
               {p.isHost && <Crown className="h-3 w-3 text-amber-400" />}
             </div>
           ))}
-          {isOnTeam && currentPlayer?.role !== 'operative' && (
+          {isOnTeam && myRole !== 'spectator' && myRole !== 'unassigned' && (
             <Button
-              onClick={() => onSetRole('operative')}
+              onClick={() => onSetRole('spectator')}
               variant="outline"
               size="sm"
               className="w-full border-dashed border-slate-600 text-slate-400 hover:text-white"
             >
-              Become Operative
+              Become Spectator
             </Button>
           )}
         </div>

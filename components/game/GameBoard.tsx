@@ -67,6 +67,7 @@ export function GameBoard({
             total={game.firstTeam === 'red' ? 9 : 8}
             players={redPlayers}
             isActive={game.currentTeam === 'red'}
+            currentPlayer={currentPlayer}
           />
         </div>
 
@@ -137,6 +138,7 @@ export function GameBoard({
             total={game.firstTeam === 'blue' ? 9 : 8}
             players={bluePlayers}
             isActive={game.currentTeam === 'blue'}
+            currentPlayer={currentPlayer}
           />
         </div>
       </div>

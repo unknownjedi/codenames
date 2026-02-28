@@ -301,7 +301,7 @@ export const joinGame = spacetimedb.reducer(
         const rng = seededRandom(BigInt(Date.now()));
         team = rng() > 0.5 ? 'red' : 'blue';
       }
-      role = 'operative';
+      role = 'spectator';
     }
 
     ctx.db.Player.insert({
@@ -340,7 +340,9 @@ export const joinTeam = spacetimedb.reducer(
 export const setRole = spacetimedb.reducer(
   { roomCode: t.string(), role: t.string() },
   (ctx, { roomCode, role }) => {
-    if (role !== 'spymaster' && role !== 'operative') throw new SenderError('Role must be spymaster or operative');
+    if (role !== 'spymaster' && role !== 'operative' && role !== 'spectator') {
+      throw new SenderError('Role must be spymaster, operative, or spectator');
+    }
 
     const game = findGameByCode(ctx, roomCode.toUpperCase().trim());
     if (!game) throw new SenderError('Game not found');
@@ -350,12 +352,22 @@ export const setRole = spacetimedb.reducer(
     if (!player) throw new SenderError('You are not in this game');
     if (player.team === 'unassigned') throw new SenderError('Join a team first');
 
+    const gamePlayers = getPlayersForGame(ctx, game.gameId);
+
     // Only one spymaster per team
     if (role === 'spymaster') {
-      const gamePlayers = getPlayersForGame(ctx, game.gameId);
       for (const p of gamePlayers) {
         if (p.team === player.team && p.role === 'spymaster' && !p.identity.isEqual(ctx.sender)) {
           throw new SenderError(`${player.team} team already has a Spymaster`);
+        }
+      }
+    }
+
+    // Only one operative per team
+    if (role === 'operative') {
+      for (const p of gamePlayers) {
+        if (p.team === player.team && p.role === 'operative' && !p.identity.isEqual(ctx.sender)) {
+          throw new SenderError(`${player.team} team already has an Operative`);
         }
       }
     }
@@ -668,19 +680,87 @@ export const randomizeTeams = spacetimedb.reducer(
     if (gamePlayers.length < 4) throw new SenderError('Need at least 4 players to randomize teams');
 
     const rng = seededRandom(BigInt(Date.now()));
-    const shuffled = shuffleArray(gamePlayers, rng);
 
-    const half = Math.ceil(shuffled.length / 2);
+    // Separate players with pre-set roles from those without
+    const spymasters = gamePlayers.filter((p) => p.role === 'spymaster');
+    const operatives = gamePlayers.filter((p) => p.role === 'operative');
+    const rest = gamePlayers.filter((p) => p.role !== 'spymaster' && p.role !== 'operative');
 
-    for (let i = 0; i < shuffled.length; i++) {
-      const team = i < half ? 'red' : 'blue';
-      // First player of each team becomes spymaster, rest are operatives
-      const isFirstOfTeam = i === 0 || i === half;
-      ctx.db.Player.playerId.update({
-        ...shuffled[i],
-        team,
-        role: isFirstOfTeam ? 'spymaster' : 'operative',
-      });
+    // Shuffle each group
+    const shuffledSpymasters = shuffleArray(spymasters, rng);
+    const shuffledOperatives = shuffleArray(operatives, rng);
+    const shuffledRest = shuffleArray(rest, rng);
+
+    // Assign spymasters: first to red, second to blue, extras demoted
+    const redTeam: { player: any; role: string }[] = [];
+    const blueTeam: { player: any; role: string }[] = [];
+    let hasRedSpy = false;
+    let hasBlueSpy = false;
+
+    for (const p of shuffledSpymasters) {
+      if (!hasRedSpy) {
+        redTeam.push({ player: p, role: 'spymaster' });
+        hasRedSpy = true;
+      } else if (!hasBlueSpy) {
+        blueTeam.push({ player: p, role: 'spymaster' });
+        hasBlueSpy = true;
+      } else {
+        // Extra spymasters go to the pool as unroled
+        shuffledRest.push(p);
+      }
+    }
+
+    // Assign operatives: first to red, second to blue, extras demoted
+    let hasRedOp = false;
+    let hasBlueOp = false;
+
+    for (const p of shuffledOperatives) {
+      if (!hasRedOp) {
+        redTeam.push({ player: p, role: 'operative' });
+        hasRedOp = true;
+      } else if (!hasBlueOp) {
+        blueTeam.push({ player: p, role: 'operative' });
+        hasBlueOp = true;
+      } else {
+        shuffledRest.push(p);
+      }
+    }
+
+    // Distribute remaining players evenly
+    const reshuffledRest = shuffleArray(shuffledRest, rng);
+    for (const p of reshuffledRest) {
+      if (redTeam.length <= blueTeam.length) {
+        redTeam.push({ player: p, role: '' }); // role TBD
+      } else {
+        blueTeam.push({ player: p, role: '' });
+      }
+    }
+
+    // Fill missing roles per team, then assign spectator to the rest
+    function finalizeTeam(team: { player: any; role: string }[], needSpy: boolean, needOp: boolean) {
+      for (const entry of team) {
+        if (entry.role !== '') continue;
+        if (needSpy) {
+          entry.role = 'spymaster';
+          needSpy = false;
+        } else if (needOp) {
+          entry.role = 'operative';
+          needOp = false;
+        } else {
+          entry.role = 'spectator';
+        }
+      }
+    }
+
+    finalizeTeam(redTeam, !hasRedSpy, !hasRedOp);
+    finalizeTeam(blueTeam, !hasBlueSpy, !hasBlueOp);
+
+    // Apply updates
+    for (const { player: p, role: r } of redTeam) {
+      ctx.db.Player.playerId.update({ ...p, team: 'red', role: r });
+    }
+    for (const { player: p, role: r } of blueTeam) {
+      ctx.db.Player.playerId.update({ ...p, team: 'blue', role: r });
     }
   }
 );

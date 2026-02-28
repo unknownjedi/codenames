@@ -81,7 +81,7 @@ export function GameStatusBar({ game, currentPlayer, roomCode, isHost, conn }: G
               <span className="text-slate-400 hidden sm:inline">
                 {currentPlayer.name}
                 <span className="text-slate-600 ml-1">
-                  ({currentPlayer.role === 'spymaster' ? 'Spymaster' : 'Operative'})
+                  ({currentPlayer.role === 'spymaster' ? 'Spymaster' : currentPlayer.role === 'operative' ? 'Operative' : 'Spectator'})
                 </span>
               </span>
             )}

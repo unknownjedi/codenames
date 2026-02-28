@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Eye, Crosshair } from 'lucide-react';
+import { Eye, Crosshair, Users } from 'lucide-react';
 
 interface TeamScoreboardProps {
   team: string;
@@ -9,9 +9,10 @@ interface TeamScoreboardProps {
   total: number;
   players: any[];
   isActive: boolean;
+  currentPlayer?: any;
 }
 
-export function TeamScoreboard({ team, remaining, total, players, isActive }: TeamScoreboardProps) {
+export function TeamScoreboard({ team, remaining, total, players, isActive, currentPlayer }: TeamScoreboardProps) {
   const isRed = team === 'red';
   const color = isRed ? 'text-red-400' : 'text-blue-400';
   const bgColor = isRed ? 'bg-red-950/20' : 'bg-blue-950/20';
@@ -20,7 +21,10 @@ export function TeamScoreboard({ team, remaining, total, players, isActive }: Te
   const label = isRed ? 'Red' : 'Blue';
 
   const spymaster = players.find((p) => p.role === 'spymaster');
-  const operatives = players.filter((p) => p.role === 'operative');
+  const operative = players.find((p) => p.role === 'operative');
+  const spectators = players.filter((p) => p.role === 'spectator');
+
+  const isMe = (p: any) => currentPlayer && p.playerId === currentPlayer.playerId;
 
   return (
     <div
@@ -54,17 +58,35 @@ export function TeamScoreboard({ team, remaining, total, players, isActive }: Te
       <div className="space-y-2">
         {spymaster && (
           <div className="flex items-center gap-2 text-xs">
-            <Eye className="h-3 w-3 text-slate-500" />
-            <span className="text-slate-300 truncate">{spymaster.name}</span>
+            <Eye className="h-3 w-3 text-slate-500 shrink-0" />
+            <span className={cn('truncate', isMe(spymaster) ? 'font-bold text-emerald-400' : 'text-slate-300')}>
+              {spymaster.name}{isMe(spymaster) && ' (You)'}
+            </span>
           </div>
         )}
-        {operatives.map((p) => (
-          <div key={p.playerId.toString()} className="flex items-center gap-2 text-xs">
-            <Crosshair className="h-3 w-3 text-slate-500" />
-            <span className="text-slate-300 truncate">{p.name}</span>
-            {!p.isConnected && <span className="text-slate-600">(offline)</span>}
+        {operative && (
+          <div className="flex items-center gap-2 text-xs">
+            <Crosshair className="h-3 w-3 text-slate-500 shrink-0" />
+            <span className={cn('truncate', isMe(operative) ? 'font-bold text-emerald-400' : 'text-slate-300')}>
+              {operative.name}{isMe(operative) && ' (You)'}
+            </span>
+            {!operative.isConnected && <span className="text-slate-600">(offline)</span>}
           </div>
-        ))}
+        )}
+        {spectators.length > 0 && (
+          <>
+            <div className="border-t border-slate-700/40 my-1.5" />
+            {spectators.map((p) => (
+              <div key={p.playerId.toString()} className="flex items-center gap-2 text-xs">
+                <Users className="h-3 w-3 text-slate-600 shrink-0" />
+                <span className={cn('truncate', isMe(p) ? 'font-bold text-emerald-400' : 'text-slate-500')}>
+                  {p.name}{isMe(p) && ' (You)'}
+                </span>
+                {!p.isConnected && <span className="text-slate-600">(offline)</span>}
+              </div>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
